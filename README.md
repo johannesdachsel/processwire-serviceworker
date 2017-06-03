@@ -1,0 +1,1 @@
+# ServiceWorker – a simple module providing a service worker for Processwire

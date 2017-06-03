@@ -1,0 +1,228 @@
+<?php namespace ProcessWire;
+
+/**
+* ProcessWire-ServiceWorker
+*
+*/
+
+class ServiceWorker extends WireData implements Module, ConfigurableModule {
+
+	/**
+	* General module information
+	*
+	*/
+	
+	public static function getModuleInfo() {
+		return array(
+			'title' => 'Service Worker',
+			'summary' => 'Adds a service worker to your site and allows you to control it',
+			'version' => 101,
+			'author' => 'Johannes Dachsel',
+			'singular' => true,
+			'autoload' => true,
+			'icon' => 'cogs'
+		);
+	}
+
+	
+	
+	/**
+	* Default module configuration
+	*
+	*/
+	
+	protected static $defaults = array(
+		'version' => 1,
+		'offline_page' => 1,
+		'pages_to_cache' => null,
+		'assets_to_cache' => ''
+	);
+	
+	
+	
+	/**
+	* Copy the service worker script to root directory when module gets installed
+	*
+	*/
+	
+	public function ___install() {
+		if(!file_exists(wire('config')->paths->root.'serviceworker.js.php')) {
+			if(copy(__DIR__.'/serviceworker.js.php', wire('config')->paths->root.'serviceworker.js.php')){
+				$this->message(__('File serviceworker.js.php successfully copied to your root directory.'));
+			} else {
+				$this->error(__('File serviceworker.js.php couldn’t be copied to your root directory.'));
+			}
+		} else {
+			$this->warning(__("File serviceworker.js.php already exists in your root directory."));
+		}
+	}
+	
+	
+	
+	/**
+	* Attach a hook to Pages::save method that checks 
+	* if the cache version number needs to be bumped
+	*
+	*/
+	
+	public function init() {
+		$this->addHookAfter('Pages::save', $this, 'revalidateCache');
+	}
+	
+	
+	
+	/**
+	* Module configuration panel
+	*
+	*/
+	
+	public static function getModuleConfigInputfields(array $data) {
+		$data = array_merge(self::$defaults, $data);
+		
+		$fields = new InputfieldWrapper();
+		$modules = wire('modules');
+		
+		$field = $modules->get('InputfieldMarkup');
+		$field->value = '<p>Use <code>$modules->get(\'ServiceWorker\')->renderJavaScript()</code> in your templates to include the installation script.</p>';
+		$fields->append($field);
+
+		$field = $modules->get('InputfieldPageListSelect');
+		$field->label = __('Offline page');
+		$field->description = __('Default page when network fails. Gets cached immediately when the Service Worker is installed.');
+		$field->attr('name', 'offline_page');
+		$field->attr('value', $data['offline_page']);
+		$field->columnWidth = '50';
+		$field->required = 1;
+		$fields->append($field);
+		
+		$field = $modules->get('InputfieldFloat');
+		$field->label = __('Current cache version');
+		$field->description = __('Change this to force updating cached static assets.');
+		$field->precision = 2;
+		$field->attr('name', 'version');
+		$field->attr('size', 100);
+		$field->attr('value', number_format($data['version'], 2, '.', ''));
+		$field->columnWidth = '50';
+		$fields->append($field);
+		
+		$field = $modules->get('InputfieldPageListSelectMultiple');
+		$field->label = __('Additional pages to cache');
+		$field->description = __('Pages that need to be cached when the Service Worker is installed.');
+		$field->notes = __('Be reasonable here! Visited pages will be cached anyway.');
+		$field->attr('name', 'pages_to_cache');
+		$field->attr('value', $data['pages_to_cache']);
+		$field->columnWidth = '50';
+		$fields->append($field);
+		
+		$field = $modules->get('InputfieldTextarea');
+		$field->label = __('Static assets to cache');
+		$field->description = __('Any static assets that need to be cached when the Service Worker is installed.');
+		$field->notes = __('Use one line per path or URL.');
+		$field->attr('name', 'assets_to_cache');
+		$field->attr('value', $data['assets_to_cache']);
+		$field->attr('rows', 15);
+		$field->columnWidth = '50';
+		$fields->append($field);
+		
+		return $fields;
+	}
+	
+	
+	
+	/**
+	* Check wether or not the saved page is an upfront cached page
+	* and update cache version number accordingly
+	*
+	*/
+	
+	protected function revalidateCache($event) {
+		$page = $event->arguments(0);
+		
+		// create new PageArray and add all pages that are configured to be cached
+		$cachePages = new PageArray();
+		$cachePages->add($this->offline_page);
+		if(count($this->pages_to_cache)) $cachePages->add($this->pages_to_cache);
+		
+		// if the saved page is an element of that PageArray, bump version to force updating the cache
+		if($cachePages->has($page)){
+			$this->bumpVersion();
+		}
+	}
+	
+	
+	
+	/**
+	* Increases static cache version number
+	*
+	*/
+	
+	protected function bumpVersion() {
+		$newData = $this->data;
+		$newData['version'] = (float) $this->version + 0.01;
+		
+		wire('modules')->saveModuleConfigData($this, $newData);
+		$this->message(__('Service Worker: cache version bumped to '.$newData['version']));
+	}	
+	
+	
+	
+	/**
+	* Returns JSON string with URLs of configured offline pages
+	*
+	*/
+	
+	public function getOfflinePages() {
+		$cachePages = $this->pages_to_cache;
+		$cachePages[] = $this->offline_page;
+		$offlinePages = array();
+		
+		foreach($cachePages as $cachePageId){
+			$cachePage = wire('pages')->get($cachePageId);
+			$offlinePages[] = $cachePage->url;
+		}
+		
+		return json_encode($offlinePages, JSON_UNESCAPED_SLASHES);
+	}
+	
+	
+	
+	/**
+	* Returns URL of configured offline page
+	*
+	*/
+	
+	public function getOfflineURL() {
+		return wire('pages')->get($this->offline_page)->url;
+	}
+	
+	
+	
+	/**
+	* Returns JSON string with URLs of configured offline pages
+	*
+	*/
+	
+	public function getStaticAssets() {
+		$assetsArray = explode("\n", $this->assets_to_cache);
+		return json_encode($assetsArray, JSON_UNESCAPED_SLASHES);
+	}
+	
+	
+	
+	/**
+	* Creates the JavaScript output needed for the service worker to install
+	*
+	*/
+	
+	public function renderJavaScript() {
+		$output = "<script>\n";
+		$output .= "\tif(navigator.serviceWorker) {\n";
+		$output	.= "\t\tnavigator.serviceWorker.register('/serviceworker.js.php', {\n";
+		$output	.= "\t\t\tscope: '/'\n";
+		$output .= "\t\t});\n";
+		$output .= "\t}\n";
+		$output .= "</script>";
+		echo $output;
+	}
+	
+}
