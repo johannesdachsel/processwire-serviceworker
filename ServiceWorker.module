@@ -15,7 +15,7 @@ class ServiceWorker extends WireData implements Module, ConfigurableModule {
 	public static function getModuleInfo() {
 		return array(
 			'title' => 'Service Worker',
-			'summary' => 'Adds a service worker to your site and allows you to control it',
+			'summary' => 'Adding a service worker to your site that allows viewing your pages offline',
 			'version' => 101,
 			'author' => 'Johannes Dachsel',
 			'singular' => true,

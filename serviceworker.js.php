@@ -7,7 +7,7 @@
 /*
 * Service Worker
 *
-* heavily based on Jeremy Keith’s work (http://adactio.com) – thank you Jeremy!
+* heavily based on Jeremy Keith’s work (https://adactio.com) – thank you Jeremy!
 *
 */
 
