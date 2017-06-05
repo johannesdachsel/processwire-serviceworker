@@ -80,8 +80,8 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('message', event => {
     if (event.data.command == 'trimCaches') {
-        trimCache(pagesCacheName, 35);
-        trimCache(imagesCacheName, 20);
+        trimCache(pagesCacheName, <?=$serviceWorker->max_page_items?>);
+        trimCache(imagesCacheName, <?=$serviceWorker->max_image_items?>);
     }
 });
 

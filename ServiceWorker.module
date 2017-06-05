@@ -217,12 +217,17 @@ class ServiceWorker extends WireData implements Module, ConfigurableModule {
 	public function renderJavaScript() {
 		$output = "<script>\n";
 		$output .= "\tif(navigator.serviceWorker) {\n";
-		$output	.= "\t\tnavigator.serviceWorker.register('/serviceworker.js.php', {\n";
+		$output	.= "\t\tnavigator.serviceWorker.register('/serviceworker.js.php?v=".strtotime('now')."', {\n";
 		$output	.= "\t\t\tscope: '/'\n";
 		$output .= "\t\t});\n";
+		$output .= "\t\twindow.addEventListener('load', function() {\n";
+		$output .= "\t\t\tif (navigator.serviceWorker.controller) {\n";
+		$output .= "\t\t\t\tnavigator.serviceWorker.controller.postMessage({'command': 'trimCaches'});\n";
+		$output .= "\t\t\t}\n";
+		$output .= "\t\t});\n";
 		$output .= "\t}\n";
-		$output .= "</script>";
+		$output .= "</script>\n";
 		echo $output;
 	}
-	
+
 }
