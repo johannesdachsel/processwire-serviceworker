@@ -35,7 +35,9 @@ class ServiceWorker extends WireData implements Module, ConfigurableModule {
 		'version' => 1,
 		'offline_page' => 1,
 		'pages_to_cache' => null,
-		'assets_to_cache' => ''
+		'assets_to_cache' => '',
+		'max_page_items' => 35,
+		'max_image_items' => 20
 	);
 	
 	
@@ -85,24 +87,44 @@ class ServiceWorker extends WireData implements Module, ConfigurableModule {
 		$field = $modules->get('InputfieldMarkup');
 		$field->value = '<p>Use <code>$modules->get(\'ServiceWorker\')->renderJavaScript()</code> in your templates to include the installation script.</p>';
 		$fields->append($field);
-
+		
+		$field = $modules->get('InputfieldFloat');
+		$field->label = __('Current cache version');
+		$field->description = __('Change this to force cache update.');
+		$field->precision = 2;
+		$field->attr('name', 'version');
+		$field->attr('size', 100);
+		$field->attr('value', number_format($data['version'], 2, '.', ''));
+		$field->columnWidth = '28';
+		$fields->append($field);
+		
+		$field = $modules->get('InputfieldInteger');
+		$field->label = __('Max. pages in cache');
+		$field->description = __('The maximum number of pages allowed in page cache');
+		$field->attr('name', 'max_page_items');
+		$field->attr('type', 'number');
+		$field->attr('size', 100);
+		$field->attr('value', (int) $data['max_page_items']);
+		$field->columnWidth = '36';
+		$fields->append($field);
+		
+		$field = $modules->get('InputfieldInteger');
+		$field->label = __('Max. images in cache');
+		$field->description = __('The maximum number of images allowed in image cache');
+		$field->attr('name', 'max_image_items');
+		$field->attr('type', 'number');
+		$field->attr('size', 100);
+		$field->attr('value', (int) $data['max_image_items']);
+		$field->columnWidth = '36';
+		$fields->append($field);
+		
 		$field = $modules->get('InputfieldPageListSelect');
 		$field->label = __('Offline page');
 		$field->description = __('Default page when network fails. Gets cached immediately when the Service Worker is installed.');
 		$field->attr('name', 'offline_page');
 		$field->attr('value', $data['offline_page']);
-		$field->columnWidth = '50';
+		$field->columnWidth = '28';
 		$field->required = 1;
-		$fields->append($field);
-		
-		$field = $modules->get('InputfieldFloat');
-		$field->label = __('Current cache version');
-		$field->description = __('Change this to force updating cached static assets.');
-		$field->precision = 2;
-		$field->attr('name', 'version');
-		$field->attr('size', 100);
-		$field->attr('value', number_format($data['version'], 2, '.', ''));
-		$field->columnWidth = '50';
 		$fields->append($field);
 		
 		$field = $modules->get('InputfieldPageListSelectMultiple');
@@ -111,7 +133,7 @@ class ServiceWorker extends WireData implements Module, ConfigurableModule {
 		$field->notes = __('Be reasonable here! Visited pages will be cached anyway.');
 		$field->attr('name', 'pages_to_cache');
 		$field->attr('value', $data['pages_to_cache']);
-		$field->columnWidth = '50';
+		$field->columnWidth = '36';
 		$fields->append($field);
 		
 		$field = $modules->get('InputfieldTextarea');
@@ -121,7 +143,7 @@ class ServiceWorker extends WireData implements Module, ConfigurableModule {
 		$field->attr('name', 'assets_to_cache');
 		$field->attr('value', $data['assets_to_cache']);
 		$field->attr('rows', 15);
-		$field->columnWidth = '50';
+		$field->columnWidth = '36';
 		$fields->append($field);
 		
 		return $fields;
