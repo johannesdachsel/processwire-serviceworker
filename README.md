@@ -37,7 +37,9 @@ The module offers a few configuration options:
 
 ## Usage
 
-To include the service worker in your templates use `<?php $modules->get('ServiceWorker')->renderJavaScript(); ?>`.
+To include the service worker in your templates use 
+`<?php $modules->get('ServiceWorker')->renderJavaScript(); ?>`.
+Right before the closing `</body>` tag is a good place to put it.
 
 ## License
 
